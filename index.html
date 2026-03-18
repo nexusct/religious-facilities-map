@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+   ______                            __
+  / ____/___  ____ ___  ____  __  __/ /____  _____
+ / /   / __ \/ __ `__ \/ __ \/ / / / __/ _ \/ ___/
+/ /___/ /_/ / / / / / / /_/ / /_/ / /_/  __/ /
+\____/\____/_/ /_/ /_/ .___/\__,_/\__/\___/_/
+                    /_/
+        Created with Perplexity Computer
+        https://www.perplexity.ai/computer
+-->
+
+<!-- Perplexity Computer Attribution — SEO Meta Tags -->
+<meta name="generator" content="Perplexity Computer">
+<meta name="author" content="Perplexity Computer">
+<meta property="og:see_also" content="https://www.perplexity.ai/computer">
+<link rel="author" href="https://www.perplexity.ai/computer">
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NexusCT — Religious Facilities Market Intelligence</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════ HEADER ══ -->
+  <header class="header">
+    <div class="header-left">
+      <a href="#" class="logo" style="text-decoration:none">
+        <span class="logo-nexus">Nexus</span><span class="logo-ct">CT</span>
+      </a>
+      <div class="header-divider"></div>
+      <div class="header-subtitle">Religious Facilities Market Intelligence</div>
+    </div>
+    <div class="header-right">
+      <div class="header-badge" id="totalBadge">
+        <span class="badge-number" id="badgeCount">0</span>
+        <span class="badge-label">Facilities</span>
+      </div>
+      <div class="header-hq">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <circle cx="5" cy="5" r="4" stroke="#00b4d8" stroke-width="1.5"/>
+          <circle cx="5" cy="5" r="1.5" fill="#00b4d8"/>
+        </svg>
+        <span>Schaumburg, IL</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════ MAIN ══ -->
+  <div class="main-layout">
+
+    <!-- ─── SIDEBAR ─── -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- Toggle button -->
+      <button class="sidebar-toggle" id="sidebarToggle" title="Collapse sidebar">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="sidebar-content" id="sidebarContent">
+
+        <!-- ── SEARCH ── -->
+        <div class="sidebar-section search-section">
+          <div class="search-wrapper">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="6" cy="6" r="4.5" stroke="#6b7280" stroke-width="1.3"/>
+              <path d="M9.5 9.5L12.5 12.5" stroke="#6b7280" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search facilities…" autocomplete="off" />
+            <button class="search-clear" id="searchClear" title="Clear search">✕</button>
+          </div>
+        </div>
+
+        <!-- ── FILTERS ── -->
+        <div class="sidebar-section">
+          <div class="section-header" data-collapse="filters">
+            <span class="section-title">Filters</span>
+            <button class="reset-btn" id="resetFilters">Reset</button>
+          </div>
+
+          <!-- Facility Type -->
+          <div class="filter-group">
+            <div class="filter-group-label">Facility Type</div>
+            <div class="type-filters" id="typeFilters">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Distance -->
+          <div class="filter-group">
+            <div class="filter-group-label">
+              Distance
+              <span class="filter-value-label" id="distanceLabel">0 – 50 mi</span>
+            </div>
+            <div class="range-wrapper">
+              <input type="range" id="distanceSlider" class="range-slider" min="0" max="50" value="50" step="5" />
+              <div class="range-track-fill" id="distanceFill"></div>
+            </div>
+          </div>
+
+          <!-- Religion -->
+          <div class="filter-group">
+            <div class="filter-group-label">Religion</div>
+            <div class="religion-filters" id="religionFilters">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- State -->
+          <div class="filter-group">
+            <div class="filter-group-label">State</div>
+            <div class="state-filters" id="stateFilters">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Apollo.io Filter -->
+          <div class="filter-group">
+            <div class="filter-group-label">Apollo.io Data</div>
+            <div class="state-filters">
+              <label class="checkbox-label">
+                <input type="checkbox" id="apolloOnlyToggle" />
+                <span class="checkbox-custom"></span>
+                <span>Only with Apollo data</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── STATISTICS ── -->
+        <div class="sidebar-section">
+          <div class="section-header">
+            <span class="section-title">Statistics</span>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number" id="statVisible">0</div>
+              <div class="stat-label">Shown</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" id="statAvgDist">—</div>
+              <div class="stat-label">Avg Distance</div>
+            </div>
+          </div>
+
+          <div class="section-header" style="margin-top:12px">
+            <span class="section-title">Apollo.io Intelligence</span>
+          </div>
+          <div class="stats-grid apollo-stats">
+            <div class="stat-card">
+              <div class="stat-number" id="statApolloEnriched">0</div>
+              <div class="stat-label">Enriched</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" id="statWithContacts">0</div>
+              <div class="stat-label">With Contacts</div>
+            </div>
+            <div class="stat-card" style="grid-column:1/-1">
+              <div class="stat-number" id="statTotalContacts">0</div>
+              <div class="stat-label">Total Contacts Found</div>
+            </div>
+          </div>
+
+          <!-- Type breakdown mini chart -->
+          <div class="type-breakdown" id="typeBreakdown">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- ── FACILITY LIST ── -->
+        <div class="sidebar-section list-section">
+          <div class="section-header">
+            <span class="section-title">Facilities</span>
+            <button class="export-btn" id="exportBtn" title="Export to CSV">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M6 1v7M3.5 5.5L6 8l2.5-2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M1 9.5h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+              Export CSV
+            </button>
+          </div>
+
+          <div class="facility-list" id="facilityList">
+            <div class="list-loading">Loading facilities…</div>
+          </div>
+        </div>
+
+      </div><!-- /sidebar-content -->
+    </aside>
+
+    <!-- ─── MAP ─── -->
+    <div class="map-container">
+      <div id="map"></div>
+
+      <!-- Sidebar expand button (when collapsed) -->
+      <button class="sidebar-expand" id="sidebarExpand" title="Expand sidebar">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M5 2L10 7L5 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+  </div><!-- /main-layout -->
+
+  <!-- Footer attribution -->
+  <footer style="position:fixed;bottom:0;right:0;padding:4px 12px;z-index:999;font-size:10px;opacity:0.5;">
+    <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer" style="color:#9ba3b8;text-decoration:none;">
+      Created with Perplexity Computer
+    </a>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="./data.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="./app.js"></script>
+
+</body>
+</html>
