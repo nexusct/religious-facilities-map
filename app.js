@@ -11,6 +11,21 @@
   const SCHAUMBURG = [42.0334, -88.0834];
   const RADIUS_MILES = 50;
   const MILES_TO_METERS = 1609.344;
+  const GMAPS_API_KEY = 'AIzaSyDnKyekc_Ctc5sI0LbQ2pHqgVTuqlfvs4s';
+
+  /* ── Aerial image helpers ────────────────────────────────── */
+  function aerialThumbUrl(lat, lon, size) {
+    size = size || 300;
+    const scale = size > 300 ? 2 : 1;
+    const px = scale > 1 ? Math.ceil(size / 2) : size;
+    return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lon}&zoom=19&size=${px}x${px}&scale=${scale}&maptype=satellite&key=${GMAPS_API_KEY}`;
+  }
+  function gmapsSatLink(lat, lon) {
+    return `https://www.google.com/maps/@${lat},${lon},200m/data=!3m1!1e3`;
+  }
+  function hasAerialData(f) {
+    return f.apollo_contacts && f.apollo_contacts.length > 0 && f.apollo_contacts.some(c => c.email);
+  }
 
   const TYPE_COLORS = {
     'Church':     '#22c55e',
@@ -338,6 +353,22 @@
         : (f.apollo_org ? '<span class="apollo-badge apollo-partial">Apollo Org Data</span>' : '<span class="apollo-badge apollo-searched">Apollo Searched</span>'))
       : '';
 
+    // Aerial image section
+    let aerialHtml = '';
+    if (hasAerialData(f)) {
+      const thumbUrl = aerialThumbUrl(f.lat, f.lon, 360);
+      const satLink  = gmapsSatLink(f.lat, f.lon);
+      aerialHtml = `<div class="popup-aerial">
+        <a href="${satLink}" target="_blank" rel="noopener noreferrer" title="Open in Google Maps Satellite View">
+          <img src="${thumbUrl}" alt="Aerial view of ${escHtml(f.name)}" class="popup-aerial-img" loading="lazy" />
+        </a>
+        <a href="${satLink}" target="_blank" rel="noopener noreferrer" class="popup-aerial-link">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1v-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M10 2h4v4M14 2L7 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          View on Google Maps Satellite
+        </a>
+      </div>`;
+    }
+
     return `<div class="popup-header">
       <div class="popup-name">${escHtml(f.name)}</div>
       <div class="popup-type-row">
@@ -347,6 +378,7 @@
         ${enrichBadge}
       </div>
     </div>
+    ${aerialHtml}
     <div class="popup-body">
       ${rows}
       ${metaGrid}
@@ -564,16 +596,41 @@
         LinkedIn
       </a>`;
 
+      // Aerial thumbnail for sidebar
+      let aerialThumb = '';
+      if (hasAerialData(f)) {
+        const thumbSrc = aerialThumbUrl(f.lat, f.lon, 120);
+        const satLink = gmapsSatLink(f.lat, f.lon);
+        aerialThumb = `<a href="${satLink}" target="_blank" rel="noopener noreferrer" class="list-aerial-link" title="View satellite image" onclick="event.stopPropagation()">
+          <img src="${thumbSrc}" alt="Aerial" class="list-aerial-thumb" loading="lazy" />
+        </a>`;
+      }
+
+      // Google Maps satellite link for sidebar
+      let satLinkBtn = '';
+      if (hasAerialData(f)) {
+        const satUrl = gmapsSatLink(f.lat, f.lon);
+        satLinkBtn = `<a href="${satUrl}" target="_blank" rel="noopener noreferrer" class="item-link-btn item-link-satellite" title="Google Maps Satellite" onclick="event.stopPropagation()">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M8 1a7 7 0 100 14A7 7 0 008 1z" stroke="#34A853" stroke-width="1.2"/><path d="M1 8h14M8 1c-2 2.5-2.5 4.5-2.5 7s.5 4.5 2.5 7c2-2.5 2.5-4.5 2.5-7S10 3.5 8 1z" stroke="#34A853" stroke-width="1.2"/></svg>
+          Satellite
+        </a>`;
+      }
+
       return `<div class="facility-item${hasContacts ? ' has-contacts' : ''}" data-idx="${origIdx}" role="button" tabindex="0">
-        <div class="facility-item-top">
-          <span class="facility-item-name">${escHtml(f.name)}</span>
-          <span class="facility-item-dist">${dist}</span>
-        </div>
-        <div class="facility-item-bottom">
-          <span class="type-badge" style="background:${color}20;color:${color}">${escHtml(short)}</span>
-          ${f.denomination ? `<span class="religion-badge">${escHtml(f.denomination)}</span>` : ''}
-          ${city ? `<span class="facility-item-city">${escHtml(city)}</span>` : ''}
-          ${apolloIndicator}
+        <div class="facility-item-row-top">
+          ${aerialThumb}
+          <div class="facility-item-info">
+            <div class="facility-item-top">
+              <span class="facility-item-name">${escHtml(f.name)}</span>
+              <span class="facility-item-dist">${dist}</span>
+            </div>
+            <div class="facility-item-bottom">
+              <span class="type-badge" style="background:${color}20;color:${color}">${escHtml(short)}</span>
+              ${f.denomination ? `<span class="religion-badge">${escHtml(f.denomination)}</span>` : ''}
+              ${city ? `<span class="facility-item-city">${escHtml(city)}</span>` : ''}
+              ${apolloIndicator}
+            </div>
+          </div>
         </div>
         ${extraInfo}
         ${orgLinksHtml}
@@ -581,6 +638,7 @@
         <div class="facility-item-links">
           ${googleLink}
           ${linkedinSearchLink}
+          ${satLinkBtn}
         </div>
       </div>`;
     }).join('');
