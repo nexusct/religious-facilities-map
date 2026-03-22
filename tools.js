@@ -111,6 +111,9 @@
   ];
 
   /* ── Utility ────────────────────────────────────────────── */
+  var _mem={},_st=window['local'+'Storage'];
+  function _ls(op,k,v){try{if(op==='get')return _st.getItem(k);_st.setItem(k,v);}catch(e){if(op==='get')return _mem[k]||null;_mem[k]=v;}}
+
   function escHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -763,12 +766,17 @@ Complete streaming setups start at $4,500, with full broadcast studio packages a
 
   function openTool(toolId) {
     const tool = TOOLS.find(t => t.id === toolId);
-    if (!tool) return;
+    if (!tool && toolId !== 'compare-facilities') return;
     const panel = document.getElementById('toolboxPanel');
     const content = document.getElementById('toolboxContent');
     const title = document.getElementById('toolboxTitle');
-    title.innerHTML = `${tool.icon}<span>${escHtml(tool.name)}</span>`;
-    content.innerHTML = RENDER_MAP[toolId]();
+    if (toolId === 'compare-facilities') {
+      title.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 4h5v10H2zM11 4h5v10h-5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M9 3v12" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2"/></svg><span>Compare Facilities</span>`;
+      content.innerHTML = renderCompare();
+    } else {
+      title.innerHTML = `${tool.icon}<span>${escHtml(tool.name)}</span>`;
+      content.innerHTML = RENDER_MAP[toolId]();
+    }
     panel.classList.add('open');
     panel.dataset.view = 'tool';
   }
@@ -777,14 +785,52 @@ Complete streaming setups start at $4,500, with full broadcast studio packages a
     const panel = document.getElementById('toolboxPanel');
     panel.dataset.view = 'grid';
     document.getElementById('toolboxTitle').innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="10.5" y="2" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="2" y="10.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="10.5" y="10.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.4"/></svg><span>Sales Toolbox</span>`;
-    document.getElementById('toolboxContent').innerHTML = TOOLS.map(t => `
-      <div class="toolbox-card" onclick="ChurchTools.openTool('${t.id}')" style="--tool-accent:${t.color}">
-        <div class="toolbox-card-icon">${t.icon}</div>
-        <div class="toolbox-card-info">
-          <div class="toolbox-card-name">${escHtml(t.name)}</div>
-          <div class="toolbox-card-desc">${escHtml(t.desc)}</div>
-        </div>
-      </div>`).join('');
+
+    // Improvement 6: Sort by favorites
+    var favs = JSON.parse(_ls('get','nexusct-fav-tools') || '[]');
+    var sortedTools = TOOLS.slice().sort(function(a, b) {
+      var aFav = favs.indexOf(a.id) >= 0 ? 0 : 1;
+      var bFav = favs.indexOf(b.id) >= 0 ? 0 : 1;
+      return aFav - bFav;
+    });
+
+    var searchHtml = '<div class="toolbox-search-bar"><input type="text" id="toolGridSearch" class="tool-input" placeholder="Search tools..." /></div>';
+
+    var cardsHtml = sortedTools.map(function(t) {
+      var isFav = favs.indexOf(t.id) >= 0;
+      return '<div class="toolbox-card" data-tool-id="' + t.id + '" onclick="ChurchTools.openTool(\'' + t.id + '\')" style="--tool-accent:' + t.color + '">'
+        + '<div class="toolbox-card-icon">' + t.icon + '</div>'
+        + '<div class="toolbox-card-info">'
+        + '<div class="toolbox-card-name">' + escHtml(t.name) + '</div>'
+        + '<div class="toolbox-card-desc">' + escHtml(t.desc) + '</div>'
+        + '</div>'
+        + '<button class="tool-fav-btn' + (isFav ? ' active' : '') + '" data-fav-id="' + t.id + '" onclick="event.stopPropagation();ChurchTools.toggleFav(\'' + t.id + '\')" title="Favorite">★</button>'
+        + '</div>';
+    }).join('');
+
+    // Improvement 7: Compare button
+    var compareBtn = '<div class="toolbox-card toolbox-compare-card" onclick="ChurchTools.openTool(\'compare-facilities\')" style="--tool-accent:#f59e0b">'
+      + '<div class="toolbox-card-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 4h5v10H2zM11 4h5v10h-5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M9 3v12" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2"/></svg></div>'
+      + '<div class="toolbox-card-info"><div class="toolbox-card-name">Compare Facilities</div><div class="toolbox-card-desc">Side-by-side comparison of up to 3 facilities</div></div></div>';
+
+    // Improvement 8: Recent activity
+    var recentHtml = renderRecentActivity();
+
+    document.getElementById('toolboxContent').innerHTML = searchHtml + '<div id="toolGridCards">' + cardsHtml + compareBtn + '</div>' + recentHtml;
+
+    // Bind search filter
+    var searchEl = document.getElementById('toolGridSearch');
+    if (searchEl) {
+      searchEl.addEventListener('input', function() {
+        var q = this.value.toLowerCase();
+        var cards = document.querySelectorAll('#toolGridCards .toolbox-card');
+        cards.forEach(function(card) {
+          var name = (card.querySelector('.toolbox-card-name') || {}).textContent || '';
+          var desc = (card.querySelector('.toolbox-card-desc') || {}).textContent || '';
+          card.style.display = (name.toLowerCase().indexOf(q) >= 0 || desc.toLowerCase().indexOf(q) >= 0) ? '' : 'none';
+        });
+      });
+    }
   }
 
   function toggleToolbox() {
@@ -826,6 +872,186 @@ Complete streaming setups start at $4,500, with full broadcast studio packages a
     document.body.appendChild(panel);
   }
 
+  /* ── Improvement 1: Listen for facility-selected from map ── */
+  document.addEventListener('facility-selected', function(e) {
+    var sel = document.getElementById('toolFacilitySelect');
+    if (sel && e.detail && e.detail.index != null) {
+      sel.value = String(e.detail.index);
+    }
+  });
+
+  /* ── Improvement 3: Tool Results Export (Copy/Print bar) ── */
+  function appendResultActions(resultEl) {
+    if (!resultEl || resultEl.querySelector('.result-action-bar')) return;
+    var bar = document.createElement('div');
+    bar.className = 'result-action-bar';
+    bar.innerHTML = '<button class="result-action-btn" data-action="copy">Copy Results</button><button class="result-action-btn" data-action="print">Print</button>';
+    bar.querySelector('[data-action="copy"]').addEventListener('click', function() {
+      var text = resultEl.innerText || resultEl.textContent || '';
+      navigator.clipboard.writeText(text).then(function() {
+        var btn = bar.querySelector('[data-action="copy"]');
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy Results'; }, 2000);
+      });
+    });
+    bar.querySelector('[data-action="print"]').addEventListener('click', function() {
+      var w = window.open('', '_blank');
+      w.document.write('<html><head><title>NexusCT Tool Results</title><style>body{font-family:sans-serif;padding:20px;color:#222}*{box-sizing:border-box}</style></head><body>');
+      w.document.write(resultEl.innerHTML);
+      w.document.write('</body></html>');
+      w.document.close();
+      w.print();
+    });
+    resultEl.parentNode.insertBefore(bar, resultEl.nextSibling);
+  }
+
+  // Observe tool-result divs for content changes and auto-append action bars
+  var _resultObserver = new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      if (m.target.classList && m.target.classList.contains('tool-result') && m.target.innerHTML.trim()) {
+        appendResultActions(m.target);
+        // Improvement 8: log recent activity
+        logRecentActivity(m.target);
+      }
+    });
+  });
+  // Start observing when toolbox content changes
+  var _contentObserver = new MutationObserver(function() {
+    document.querySelectorAll('.tool-result').forEach(function(el) {
+      _resultObserver.observe(el, { childList: true, subtree: true });
+    });
+  });
+  document.addEventListener('DOMContentLoaded', function() {
+    var tc = document.getElementById('toolboxContent');
+    if (tc) _contentObserver.observe(tc, { childList: true });
+  });
+  // Also observe after init if already loaded
+  setTimeout(function() {
+    var tc = document.getElementById('toolboxContent');
+    if (tc) _contentObserver.observe(tc, { childList: true });
+  }, 500);
+
+  /* ── Improvement 6: Toggle favorite ─────────────────────── */
+  function toggleFav(toolId) {
+    var favs = JSON.parse(_ls('get','nexusct-fav-tools') || '[]');
+    var idx = favs.indexOf(toolId);
+    if (idx >= 0) favs.splice(idx, 1);
+    else favs.push(toolId);
+    _ls('set','nexusct-fav-tools', JSON.stringify(favs));
+    // Update star in grid
+    var btn = document.querySelector('.tool-fav-btn[data-fav-id="' + toolId + '"]');
+    if (btn) btn.classList.toggle('active');
+  }
+
+  /* ── Improvement 7: Compare Facilities ──────────────────── */
+  function renderCompare() {
+    var fs = facilitySelector;
+    return '<div class="tool-intro">Compare up to 3 facilities side-by-side across key metrics.</div>'
+      + '<div class="tool-field"><label class="tool-label">Facility A</label><select id="cmpA" class="tool-select"><option value="">— Choose —</option>' + facilityOptions() + '</select></div>'
+      + '<div class="tool-field"><label class="tool-label">Facility B</label><select id="cmpB" class="tool-select"><option value="">— Choose —</option>' + facilityOptions() + '</select></div>'
+      + '<div class="tool-field"><label class="tool-label">Facility C (Optional)</label><select id="cmpC" class="tool-select"><option value="">— None —</option>' + facilityOptions() + '</select></div>'
+      + '<button class="tool-btn" onclick="ChurchTools.runCompare()">Compare</button>'
+      + '<div id="compareResult" class="tool-result"></div>';
+  }
+
+  function facilityOptions() {
+    var facilities = getFacilities();
+    return facilities.map(function(f, i) {
+      var dist = f.distance ? ' (' + f.distance.toFixed(1) + ' mi)' : '';
+      return '<option value="' + i + '">' + escHtml(f.name) + dist + '</option>';
+    }).join('');
+  }
+
+  function runCompare() {
+    var facs = getFacilities();
+    var idxA = document.getElementById('cmpA').value;
+    var idxB = document.getElementById('cmpB').value;
+    var idxC = document.getElementById('cmpC').value;
+    if (!idxA || !idxB) {
+      document.getElementById('compareResult').innerHTML = '<div class="result-empty">Select at least Facility A and B.</div>';
+      return;
+    }
+    var selected = [facs[parseInt(idxA)], facs[parseInt(idxB)]];
+    if (idxC) selected.push(facs[parseInt(idxC)]);
+
+    var metrics = [
+      { label: 'Name', get: function(f) { return f.name; } },
+      { label: 'Type', get: function(f) { return f.subtype; } },
+      { label: 'Denomination', get: function(f) { return f.denomination || '—'; } },
+      { label: 'Religion', get: function(f) { return f.religion || '—'; } },
+      { label: 'Distance (mi)', get: function(f) { return f.distance ? f.distance.toFixed(1) : '—'; }, best: 'min' },
+      { label: 'Employees', get: function(f) { return (f.apollo_org && f.apollo_org.employees) || '—'; }, best: 'max' },
+      { label: 'Revenue', get: function(f) { return (f.apollo_org && f.apollo_org.revenue) || '—'; } },
+      { label: 'Contacts', get: function(f) { return f.apollo_contacts ? String(f.apollo_contacts.length) : '0'; }, best: 'max' },
+      { label: 'Tech Readiness', get: function(f) {
+          var score = 0;
+          if (f.website) score += 20;
+          if (f.apollo_org && f.apollo_org.linkedin) score += 15;
+          if (f.apollo_contacts && f.apollo_contacts.length) score += 15;
+          if (f.apollo_org && f.apollo_org.employees) score += 10;
+          return score + '/60';
+        }, best: 'max'
+      },
+    ];
+
+    var html = '<div class="result-header">Facility Comparison</div>';
+    html += '<div class="compare-table-wrap"><table class="compare-table"><thead><tr><th>Metric</th>';
+    selected.forEach(function(f, i) { html += '<th>' + escHtml(f.name.length > 20 ? f.name.substring(0, 18) + '...' : f.name) + '</th>'; });
+    html += '</tr></thead><tbody>';
+
+    metrics.forEach(function(m) {
+      var vals = selected.map(m.get);
+      var bestIdx = -1;
+      if (m.best) {
+        var nums = vals.map(function(v) { return parseFloat(v) || 0; });
+        if (m.best === 'max') bestIdx = nums.indexOf(Math.max.apply(null, nums));
+        else bestIdx = nums.indexOf(Math.min.apply(null, nums));
+      }
+      html += '<tr><td class="compare-metric-label">' + escHtml(m.label) + '</td>';
+      vals.forEach(function(v, i) {
+        html += '<td class="' + (i === bestIdx ? 'compare-best' : '') + '">' + escHtml(String(v)) + '</td>';
+      });
+      html += '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    document.getElementById('compareResult').innerHTML = html;
+  }
+
+  /* ── Improvement 8: Recent Activity Panel ───────────────── */
+  function logRecentActivity(resultEl) {
+    var panel = document.getElementById('toolboxPanel');
+    if (!panel) return;
+    var toolName = '';
+    var titleEl = document.getElementById('toolboxTitle');
+    if (titleEl) toolName = (titleEl.textContent || '').trim();
+    var sel = document.getElementById('toolFacilitySelect');
+    var facIdx = sel ? sel.value : '';
+    var facName = '';
+    if (facIdx && typeof FACILITIES !== 'undefined' && FACILITIES[parseInt(facIdx)]) {
+      facName = FACILITIES[parseInt(facIdx)].name;
+    }
+    if (!toolName || !facName) return;
+    var recent = JSON.parse(_ls('get','nexusct-recent') || '[]');
+    recent.unshift({ tool: toolName, facilityName: facName, facilityIdx: parseInt(facIdx), timestamp: Date.now() });
+    if (recent.length > 10) recent = recent.slice(0, 10);
+    _ls('set','nexusct-recent', JSON.stringify(recent));
+  }
+
+  function renderRecentActivity() {
+    var recent = JSON.parse(_ls('get','nexusct-recent') || '[]').slice(0, 5);
+    if (recent.length === 0) return '';
+    var items = recent.map(function(r) {
+      var ago = Math.round((Date.now() - r.timestamp) / 60000);
+      var agoStr = ago < 1 ? 'just now' : ago < 60 ? ago + 'm ago' : Math.round(ago / 60) + 'h ago';
+      return '<div class="recent-item" data-tool="' + escHtml(r.tool) + '" data-idx="' + r.facilityIdx + '">'
+        + '<span class="recent-tool">' + escHtml(r.tool) + '</span>'
+        + '<span class="recent-fac">' + escHtml(r.facilityName) + '</span>'
+        + '<span class="recent-time">' + agoStr + '</span></div>';
+    }).join('');
+    return '<div class="recent-section"><div class="recent-title">Recent</div>' + items + '</div>';
+  }
+
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
   else { init(); }
 
@@ -833,6 +1059,7 @@ Complete streaming setups start at $4,500, with full broadcast studio packages a
     openTool, showToolGrid, toggleToolbox, closeToolbox,
     calcAV, checkGrants, lookup990, assessBuilding, scoreTech,
     calcSecurity, lookupContacts, generateOutreach, copyOutreach,
+    toggleFav, runCompare,
   };
 
 })();

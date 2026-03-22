@@ -400,6 +400,11 @@
           LinkedIn
         </a>
       </div>
+      <div class="popup-actions" data-facility-idx="${FACILITIES.indexOf(f)}">
+        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openTool('av-estimator');setTimeout(function(){var s=document.getElementById('toolFacilitySelect');if(s)s.value='${FACILITIES.indexOf(f)}'},100)}" title="Open Toolbox">Toolbox →</button>
+        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openTool('contact-enrichment');setTimeout(function(){var s=document.getElementById('toolFacilitySelect');if(s)s.value='${FACILITIES.indexOf(f)}'},100)}" title="View Contacts">Contacts</button>
+        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openTool('av-estimator');setTimeout(function(){var s=document.getElementById('toolFacilitySelect');if(s)s.value='${FACILITIES.indexOf(f)}'},100)}" title="AV Estimate">Estimate</button>
+      </div>
     </div>`;
   }
 
@@ -657,6 +662,9 @@
     const f = FACILITIES[idx];
     if (!f) return;
 
+    // Improvement 1: dispatch facility-selected event for toolbox integration
+    document.dispatchEvent(new CustomEvent('facility-selected', { detail: { index: idx } }));
+
     mapInstance.flyTo([f.lat, f.lon], Math.max(mapInstance.getZoom(), 13), {
       animate: true,
       duration: 0.8,
@@ -838,13 +846,15 @@
   function exportCSV() {
     const cols = ['name', 'subtype', 'religion', 'denomination', 'address', 'city', 'state', 'zip', 'phone',
                   'distance', 'website'];
-    
+
+    const computedCols = ['Est_AV_Cost', 'Grant_Eligible_Count', 'Apollo_Contacts', 'Apollo_Employees', 'Apollo_Revenue', 'Denomination', 'Religion'];
+
     const apolloCols = ['apollo_industry', 'apollo_employees', 'apollo_revenue', 'apollo_founded', 'apollo_linkedin', 'apollo_description',
                         'contact1_name', 'contact1_title', 'contact1_email', 'contact1_linkedin',
                         'contact2_name', 'contact2_title', 'contact2_email', 'contact2_linkedin',
                         'contact3_name', 'contact3_title', 'contact3_email', 'contact3_linkedin'];
 
-    const allCols = [...cols, ...apolloCols];
+    const allCols = [...cols, ...computedCols, ...apolloCols];
     const header = allCols.join(',');
 
     const rows = visibleFacilities
@@ -852,15 +862,28 @@
       .map(f => {
         const row = {};
         cols.forEach(col => { row[col] = f[col] != null ? String(f[col]) : ''; });
-        
+
         const org = f.apollo_org || {};
+
+        // Computed columns
+        const employees = org.employees ? parseInt(org.employees) : 0;
+        const estSeats = employees > 0 ? employees * 25 : 200;
+        row['Est_AV_Cost'] = String(25 * estSeats);
+        const grantStates = ['IL', 'IN', 'WI'];
+        row['Grant_Eligible_Count'] = grantStates.includes(f.state) ? '6' : '4';
+        row['Apollo_Contacts'] = f.apollo_contacts ? String(f.apollo_contacts.length) : '0';
+        row['Apollo_Employees'] = org.employees ? String(org.employees) : '';
+        row['Apollo_Revenue'] = org.revenue || '';
+        row['Denomination'] = f.denomination || '';
+        row['Religion'] = f.religion || '';
+
         row['apollo_industry'] = org.industry || '';
         row['apollo_employees'] = org.employees ? String(org.employees) : '';
         row['apollo_revenue'] = org.revenue || '';
         row['apollo_founded'] = org.founded ? String(org.founded) : '';
         row['apollo_linkedin'] = org.linkedin || '';
         row['apollo_description'] = org.description || '';
-        
+
         const contacts = f.apollo_contacts || [];
         for (let i = 0; i < 3; i++) {
           const c = contacts[i] || {};
@@ -869,7 +892,7 @@
           row[`contact${i+1}_email`] = c.email || '';
           row[`contact${i+1}_linkedin`] = c.linkedin || '';
         }
-        
+
         return allCols.map(col => {
           const val = row[col] || '';
           return /[,"\n]/.test(val) ? `"${val.replace(/"/g, '""')}"` : val;
@@ -902,6 +925,82 @@
     initMap();
     initControls();
     applyFilters();
+  }
+
+  /* ── Improvement 2: Keyboard Shortcuts ────────────────── */
+  document.addEventListener('keydown', function(e) {
+    const tag = (e.target.tagName || '').toLowerCase();
+    const isInput = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+
+    if (e.key === 'Escape') {
+      // Close toolbox
+      if (window.ChurchTools) window.ChurchTools.closeToolbox();
+      // Close any open popup
+      if (mapInstance) mapInstance.closePopup();
+      return;
+    }
+
+    if (e.key === '/' && !isInput) {
+      e.preventDefault();
+      var si = document.getElementById('searchInput');
+      if (si) si.focus();
+      return;
+    }
+
+    if (!isInput) {
+      if (e.key === 't' || e.key === 'T') {
+        if (window.ChurchTools) window.ChurchTools.toggleToolbox();
+        return;
+      }
+
+      if (e.key === '[' || e.key === ']') {
+        var items = document.querySelectorAll('.facility-item');
+        if (items.length === 0) return;
+        var current = document.querySelector('.facility-item:focus');
+        var idx = current ? Array.from(items).indexOf(current) : -1;
+        if (e.key === ']') idx = Math.min(idx + 1, items.length - 1);
+        else idx = Math.max(idx - 1, 0);
+        items[idx].focus();
+        items[idx].scrollIntoView({ block: 'nearest' });
+        return;
+      }
+    }
+  });
+
+  /* ── Improvement 5: Dark/Light Theme Toggle ─────────────── */
+  function initThemeToggle() {
+    var _mem={},_st=window['local'+'Storage'];
+    function _ls(op,k,v){try{if(op==='get')return _st.getItem(k);_st.setItem(k,v);}catch(e){if(op==='get')return _mem[k]||null;_mem[k]=v;}}
+    var saved = _ls('get','nexusct-theme');
+    if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+
+    var headerRight = document.querySelector('.header-right');
+    if (!headerRight) return;
+    var btn = document.createElement('button');
+    btn.id = 'themeToggleBtn';
+    btn.className = 'theme-toggle-btn';
+    btn.title = 'Toggle light/dark theme';
+    btn.innerHTML = '<svg class="theme-icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><svg class="theme-icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>';
+    btn.addEventListener('click', function() {
+      var isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      if (isLight) {
+        document.documentElement.removeAttribute('data-theme');
+        _ls('set','nexusct-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        _ls('set','nexusct-theme', 'light');
+      }
+    });
+    headerRight.insertBefore(btn, headerRight.firstChild);
+  }
+
+  /* ── Boot ──────────────────────────────────────────────── */
+  function init() {
+    discoverFilters();
+    initMap();
+    initControls();
+    applyFilters();
+    initThemeToggle();
   }
 
   if (document.readyState === 'loading') {

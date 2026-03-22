@@ -894,18 +894,199 @@
   color: var(--text-tertiary);
 }
 
-/* ── Responsive ─────────────────────────────────────────────── */
+/* ── Improvement 3: Tool Result Action Bar ─────────────────── */
+.result-action-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+.result-action-btn {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 150ms;
+  text-align: center;
+}
+.result-action-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+/* ── Improvement 6: Toolbox Search Bar ─────────────────────── */
+.toolbox-search-bar {
+  margin-bottom: 10px;
+}
+.toolbox-search-bar .tool-input {
+  width: 100%;
+  font-size: 12px;
+  padding: 7px 10px;
+}
+
+/* ── Improvement 6: Favorite Star ──────────────────────────── */
+.tool-fav-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  transition: color 150ms, transform 150ms;
+  line-height: 1;
+}
+.tool-fav-btn:hover {
+  color: #f59e0b;
+  transform: scale(1.2);
+}
+.tool-fav-btn.active {
+  color: #f59e0b;
+}
+
+/* ── Improvement 7: Compare Table ──────────────────────────── */
+.compare-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  margin-top: 10px;
+}
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.compare-table th {
+  background: var(--bg-surface);
+  padding: 7px 8px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+.compare-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+.compare-table tr:hover td {
+  background: var(--bg-elevated);
+}
+.compare-metric-label {
+  font-weight: 600;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.compare-best {
+  color: #22c55e !important;
+  font-weight: 600;
+}
+.toolbox-compare-card {
+  border-left-color: #f59e0b !important;
+  border-style: dashed;
+  border-left-style: solid;
+}
+
+/* ── Improvement 8: Recent Activity ────────────────────────── */
+.recent-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+.recent-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 150ms;
+  margin-bottom: 2px;
+}
+.recent-item:hover {
+  background: var(--bg-hover);
+}
+.recent-tool {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recent-fac {
+  flex: 1;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-time {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Improvement 10: Mobile Responsive Toolbox ─────────────── */
 @media (max-width: 768px) {
   .toolbox-panel {
-    width: 100%;
+    width: 100vw;
     left: 0;
   }
   .toolbox-trigger-btn span:not(svg) {
     display: none;
   }
+  .toolbox-card {
+    min-height: 56px;
+    padding: 14px 12px;
+  }
+  .toolbox-card-name {
+    font-size: 14px;
+  }
+  .toolbox-card-desc {
+    font-size: 12px;
+  }
+  .tool-select,
+  .tool-input {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .tool-btn {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .tool-label {
+    font-size: 12px;
+  }
+  .result-card-value {
+    font-size: 16px;
+  }
 }
 @media (max-width: 480px) {
   .toolbox-panel {
-    width: 100%;
+    width: 100vw;
   }
 }

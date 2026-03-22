@@ -1288,3 +1288,115 @@ html, body {
   background: rgba(52,168,83,0.08) !important;
   border-color: rgba(52,168,83,0.4) !important;
 }
+
+/* ── Improvement 4: Popup Quick Actions ────────────────────── */
+.popup-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+.popup-action-btn {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: var(--brand-cyan);
+  background: rgba(0,180,216,0.08);
+  border: 1px solid rgba(0,180,216,0.2);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: all 150ms;
+  white-space: nowrap;
+}
+.popup-action-btn:hover {
+  background: rgba(0,180,216,0.16);
+  border-color: rgba(0,180,216,0.4);
+}
+
+/* ── Improvement 5: Light Theme Overrides ──────────────────── */
+[data-theme="light"] {
+  --bg-deepest:   #f0f2f5;
+  --bg-base:      #ffffff;
+  --bg-surface:   #f8f9fa;
+  --bg-elevated:  #f0f2f5;
+  --bg-hover:     #e8eaed;
+  --bg-active:    #dce0e5;
+  --border-subtle:  rgba(0,0,0,0.06);
+  --border-default: rgba(0,0,0,0.10);
+  --border-strong:  rgba(0,0,0,0.16);
+  --text-primary:   #1a1d23;
+  --text-secondary: #4a5568;
+  --text-tertiary:  #718096;
+  --text-muted:     #a0aec0;
+}
+
+/* ── Theme Toggle Button ──────────────────────────────────────── */
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 150ms;
+  flex-shrink: 0;
+}
+.theme-toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.theme-icon-moon { display: none; }
+[data-theme="light"] .theme-icon-sun { display: none; }
+[data-theme="light"] .theme-icon-moon { display: block; }
+
+/* Keep dark map tiles visible in light mode */
+[data-theme="light"] .leaflet-container {
+  background: #1a1d23;
+}
+
+/* Leaflet popups and tooltips still use dark in light mode */
+[data-theme="light"] .leaflet-popup-content-wrapper {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-default) !important;
+}
+[data-theme="light"] .leaflet-popup-tip {
+  background: var(--bg-surface) !important;
+  border-color: var(--border-default) !important;
+}
+
+/* ── Improvement 10: Mobile sidebar collapse ──────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    min-width: 0;
+    width: 0;
+    border-right: none;
+  }
+  .sidebar .sidebar-content,
+  .sidebar .sidebar-toggle {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .sidebar.mobile-open {
+    width: var(--sidebar-w, 280px);
+    min-width: var(--sidebar-w, 280px);
+    border-right: 1px solid var(--border-default);
+  }
+  .sidebar.mobile-open .sidebar-content,
+  .sidebar.mobile-open .sidebar-toggle {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .sidebar-expand {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
