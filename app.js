@@ -401,9 +401,9 @@
         </a>
       </div>
       <div class="popup-actions" data-facility-idx="${FACILITIES.indexOf(f)}">
-        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openTool('av-estimator');setTimeout(function(){var s=document.getElementById('toolFacilitySelect');if(s)s.value='${FACILITIES.indexOf(f)}'},100)}" title="Open Toolbox">Toolbox →</button>
-        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openTool('contact-enrichment');setTimeout(function(){var s=document.getElementById('toolFacilitySelect');if(s)s.value='${FACILITIES.indexOf(f)}'},100)}" title="View Contacts">Contacts</button>
-        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openTool('av-estimator');setTimeout(function(){var s=document.getElementById('toolFacilitySelect');if(s)s.value='${FACILITIES.indexOf(f)}'},100)}" title="AV Estimate">Estimate</button>
+        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.toggleToolbox();}" title="Open Toolbox">Toolbox →</button>
+        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openTool('contact-enrichment');setTimeout(function(){var s=document.getElementById('toolFacilitySelect');if(s){s.value='${FACILITIES.indexOf(f)}';ChurchTools.lookupContacts();}},150)}" title="View Contacts">Contacts</button>
+        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openTool('av-estimator');setTimeout(function(){var s=document.getElementById('toolFacilitySelect');if(s){s.value='${FACILITIES.indexOf(f)}';ChurchTools.calcAV();}},150)}" title="AV Estimate">Estimate</button>
       </div>
     </div>`;
   }
