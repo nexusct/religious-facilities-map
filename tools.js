@@ -764,6 +764,35 @@ Complete streaming setups start at $4,500, with full broadcast studio packages a
     'outreach-generator': renderOutreachGenerator,
   };
 
+  const AUTO_RUN_MAP = {
+    'lookupContacts': lookupContacts,
+    'calcAV': calcAV,
+    'calcSecurity': calcSecurity,
+    'checkGrants': checkGrants,
+    'lookup990': lookup990,
+    'assessBuilding': assessBuilding,
+    'scoreTech': scoreTech,
+    'generateOutreach': generateOutreach,
+  };
+
+  function openToolForFacility(toolId, facilityIdx, autoRunFnName) {
+    openTool(toolId);
+    var attempts = 0;
+    function trySetAndRun() {
+      var sel = document.getElementById('toolFacilitySelect');
+      if (sel) {
+        sel.value = String(facilityIdx);
+        if (autoRunFnName && typeof AUTO_RUN_MAP[autoRunFnName] === 'function') {
+          AUTO_RUN_MAP[autoRunFnName]();
+        }
+      } else if (attempts < 20) {
+        attempts++;
+        requestAnimationFrame(trySetAndRun);
+      }
+    }
+    requestAnimationFrame(trySetAndRun);
+  }
+
   function openTool(toolId) {
     const tool = TOOLS.find(t => t.id === toolId);
     if (!tool && toolId !== 'compare-facilities') return;
@@ -1059,7 +1088,7 @@ Complete streaming setups start at $4,500, with full broadcast studio packages a
     openTool, showToolGrid, toggleToolbox, closeToolbox,
     calcAV, checkGrants, lookup990, assessBuilding, scoreTech,
     calcSecurity, lookupContacts, generateOutreach, copyOutreach,
-    toggleFav, runCompare,
+    toggleFav, runCompare, openToolForFacility,
   };
 
 })();

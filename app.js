@@ -53,6 +53,7 @@
     states: new Set(),    // populated dynamically
     search: '',
     apolloOnly: false,
+    denomination: '',
   };
 
   let visibleFacilities = [];
@@ -374,7 +375,7 @@
       <div class="popup-type-row">
         <div class="popup-type-dot" style="background:${color}"></div>
         <span class="popup-type-label">${escHtml(f.subtype)}</span>
-        ${f.denomination ? `<span class="popup-religion-label">${escHtml(f.denomination)}</span>` : ''}
+        ${f.denomination ? `<span class="popup-religion-label clickable-denom" onclick="event.stopPropagation();window.filterByDenomination('${escHtml(f.denomination)}')" title="Show all ${escHtml(f.denomination)} facilities">${escHtml(f.denomination)}</span>` : ''}
         ${enrichBadge}
       </div>
     </div>
@@ -401,9 +402,9 @@
         </a>
       </div>
       <div class="popup-actions" data-facility-idx="${FACILITIES.indexOf(f)}">
-        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.toggleToolbox();}" title="Open Toolbox">Toolbox →</button>
-        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openTool('contact-enrichment');setTimeout(function(){var s=document.getElementById('toolFacilitySelect');if(s){s.value='${FACILITIES.indexOf(f)}';ChurchTools.lookupContacts();}},150)}" title="View Contacts">Contacts</button>
-        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openTool('av-estimator');setTimeout(function(){var s=document.getElementById('toolFacilitySelect');if(s){s.value='${FACILITIES.indexOf(f)}';ChurchTools.calcAV();}},150)}" title="AV Estimate">Estimate</button>
+        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.toggleToolbox();}" title="Open Toolbox">Toolbox &rarr;</button>
+        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openToolForFacility('contact-enrichment','${FACILITIES.indexOf(f)}','lookupContacts');}" title="View Contacts">Contacts</button>
+        <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openToolForFacility('av-estimator','${FACILITIES.indexOf(f)}','calcAV');}" title="AV Estimate">Estimate</button>
       </div>
     </div>`;
   }
@@ -419,6 +420,7 @@
       const fState = f.state || '';
       if (!filters.states.has(fState)) return false;
       if (filters.apolloOnly && !f.apollo_contacts && !f.apollo_org) return false;
+      if (filters.denomination && (f.denomination || '').toLowerCase() !== filters.denomination.toLowerCase()) return false;
       if (search) {
         const nameMatch = f.name.toLowerCase().includes(search);
         const cityMatch = (f.city || '').toLowerCase().includes(search);
@@ -508,7 +510,17 @@
 
     const sorted = [...visibleFacilities].sort((a, b) => (a.distance || 999) - (b.distance || 999));
 
-    list.innerHTML = sorted.map((f) => {
+    // Active denomination filter indicator
+    let denomFilterHtml = '';
+    if (filters.denomination) {
+      const denomDisplay = filters.denomination.charAt(0).toUpperCase() + filters.denomination.slice(1);
+      denomFilterHtml = `<div class="active-denom-filter">
+        <span>Showing: ${escHtml(denomDisplay)}</span>
+        <button onclick="window.clearDenomFilter()" class="clear-denom-btn" title="Clear filter">\u2715</button>
+      </div>`;
+    }
+
+    list.innerHTML = denomFilterHtml + sorted.map((f) => {
       const color = TYPE_COLORS[f.subtype] || '#9ba3b8';
       const short = TYPE_SHORT[f.subtype] || f.subtype;
       const dist  = f.distance ? f.distance.toFixed(1) + ' mi' : '—';
@@ -631,7 +643,7 @@
             </div>
             <div class="facility-item-bottom">
               <span class="type-badge" style="background:${color}20;color:${color}">${escHtml(short)}</span>
-              ${f.denomination ? `<span class="religion-badge">${escHtml(f.denomination)}</span>` : ''}
+              ${f.denomination ? `<span class="religion-badge clickable-denom" onclick="event.stopPropagation();window.filterByDenomination('${escHtml(f.denomination)}')" title="Show all ${escHtml(f.denomination)} facilities">${escHtml(f.denomination)}</span>` : ''}
               ${city ? `<span class="facility-item-city">${escHtml(city)}</span>` : ''}
               ${apolloIndicator}
             </div>
@@ -919,14 +931,6 @@
       .replace(/'/g, '&#39;');
   }
 
-  /* ── Boot ──────────────────────────────────────────────── */
-  function init() {
-    discoverFilters();
-    initMap();
-    initControls();
-    applyFilters();
-  }
-
   /* ── Improvement 2: Keyboard Shortcuts ────────────────── */
   document.addEventListener('keydown', function(e) {
     const tag = (e.target.tagName || '').toLowerCase();
@@ -1008,5 +1012,16 @@
   } else {
     init();
   }
+
+  /* ── Denomination filter (global) ────────────────────────── */
+  window.filterByDenomination = function(denom) {
+    filters.denomination = denom;
+    applyFilters();
+  };
+
+  window.clearDenomFilter = function() {
+    filters.denomination = '';
+    applyFilters();
+  };
 
 })();

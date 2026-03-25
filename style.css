@@ -679,6 +679,41 @@ html, body {
   border-radius: 3px;
   background: rgba(255,255,255,0.06);
   color: var(--text-tertiary);
+  text-transform: capitalize;
+}
+
+.clickable-denom {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.clickable-denom:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+.active-denom-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin: 0 0 8px;
+  background: rgba(0, 180, 216, 0.12);
+  border: 1px solid rgba(0, 180, 216, 0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  color: #00b4d8;
+  font-family: var(--font-sans);
+}
+.clear-denom-btn {
+  background: none;
+  border: none;
+  color: #00b4d8;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  opacity: 0.7;
+}
+.clear-denom-btn:hover {
+  opacity: 1;
 }
 
 .facility-item-city {
@@ -1371,6 +1406,10 @@ html, body {
 [data-theme="light"] .leaflet-popup-tip {
   background: var(--bg-surface) !important;
   border-color: var(--border-default) !important;
+}
+[data-theme="light"] .active-denom-filter {
+  background: rgba(0, 180, 216, 0.08);
+  border-color: rgba(0, 180, 216, 0.2);
 }
 
 /* ── Improvement 10: Mobile sidebar collapse ──────────────── */
