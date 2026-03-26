@@ -118,8 +118,8 @@
   ];
 
   /* ── Utility ────────────────────────────────────────────── */
-  var _mem={},_st=window['local'+'Storage'];
-  function _ls(op,k,v){try{if(op==='get')return _st.getItem(k);_st.setItem(k,v);}catch(e){if(op==='get')return _mem[k]||null;_mem[k]=v;}}
+  var _mem={},_st;try{_st=window['local'+'Storage'];}catch(e){_st=null;}
+  function _ls(op,k,v){try{if(_st){if(op==='get')return _st.getItem(k);_st.setItem(k,v);}else{if(op==='get')return _mem[k]||null;_mem[k]=v;}}catch(e){if(op==='get')return _mem[k]||null;_mem[k]=v;}}
 
   function escHtml(str) {
     if (!str) return '';

@@ -985,8 +985,8 @@
 
   /* ── Improvement 5: Dark/Light Theme Toggle ─────────────── */
   function initThemeToggle() {
-    var _mem={},_st=window['local'+'Storage'];
-    function _ls(op,k,v){try{if(op==='get')return _st.getItem(k);_st.setItem(k,v);}catch(e){if(op==='get')return _mem[k]||null;_mem[k]=v;}}
+    var _mem={},_st;try{_st=window['local'+'Storage'];}catch(e){_st=null;}
+    function _ls(op,k,v){try{if(_st){if(op==='get')return _st.getItem(k);_st.setItem(k,v);}else{if(op==='get')return _mem[k]||null;_mem[k]=v;}}catch(e){if(op==='get')return _mem[k]||null;_mem[k]=v;}}
     var saved = _ls('get','nexusct-theme');
     if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
 
@@ -1042,8 +1042,8 @@
 
 /* ── Saved Lists Manager ──────────────────────────────────── */
 (function() {
-  var _mem2={},_st2=window['local'+'Storage'];
-  function _ls2(op,k,v){try{if(op==='get')return _st2.getItem(k);if(op==='remove')return _st2.removeItem(k);_st2.setItem(k,v);}catch(e){if(op==='get')return _mem2[k]||null;if(op==='remove'){delete _mem2[k];return;}_mem2[k]=v;}}
+  var _mem2={},_st2;try{_st2=window['local'+'Storage'];}catch(e){_st2=null;}
+  function _ls2(op,k,v){try{if(_st2){if(op==='get')return _st2.getItem(k);if(op==='remove')return _st2.removeItem(k);_st2.setItem(k,v);}else{if(op==='get')return _mem2[k]||null;if(op==='remove'){delete _mem2[k];return;}_mem2[k]=v;}}catch(e){if(op==='get')return _mem2[k]||null;if(op==='remove'){delete _mem2[k];return;}_mem2[k]=v;}}
 
   var STORAGE_KEY = 'nexusct-church-saved-lists';
 
