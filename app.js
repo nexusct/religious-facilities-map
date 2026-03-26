@@ -370,6 +370,13 @@
       </div>`;
     }
 
+    // Saved list state for popup
+    const fIdx = FACILITIES.indexOf(f);
+    const isSaved = window._savedListManager ? window._savedListManager.isInAnyList(fIdx) : false;
+    const saveIcon = isSaved 
+      ? '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10a1 1 0 011 1v11.5l-5-3.5-5 3.5V3a1 1 0 011-1z"/></svg>'
+      : '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11.5l-5-3.5-5 3.5V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.4"/></svg>';
+
     return `<div class="popup-header">
       <div class="popup-name">${escHtml(f.name)}</div>
       <div class="popup-type-row">
@@ -402,6 +409,7 @@
         </a>
       </div>
       <div class="popup-actions" data-facility-idx="${FACILITIES.indexOf(f)}">
+        <button class="popup-action-btn popup-action-save${isSaved ? ' saved' : ''}" onclick="event.stopPropagation();window.toggleSaveToList(${fIdx})" title="${isSaved ? 'Remove from list' : 'Save to list'}">${saveIcon} ${isSaved ? 'Saved' : 'Save'}</button>
         <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.toggleToolbox();}" title="Open Toolbox">Toolbox &rarr;</button>
         <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openToolForFacility('contact-enrichment','${FACILITIES.indexOf(f)}','lookupContacts');}" title="View Contacts">Contacts</button>
         <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openToolForFacility('av-estimator','${FACILITIES.indexOf(f)}','calcAV');}" title="AV Estimate">Estimate</button>
@@ -640,6 +648,9 @@
             <div class="facility-item-top">
               <span class="facility-item-name">${escHtml(f.name)}</span>
               <span class="facility-item-dist">${dist}</span>
+              <button class="list-save-btn${window._savedListManager && window._savedListManager.isInAnyList(origIdx) ? ' saved' : ''}" onclick="event.stopPropagation();window.toggleSaveToList(${origIdx})" title="Save to list">
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="${window._savedListManager && window._savedListManager.isInAnyList(origIdx) ? 'currentColor' : 'none'}"><path d="M3 2h10a1 1 0 011 1v11.5l-5-3.5-5 3.5V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.4"/></svg>
+              </button>
             </div>
             <div class="facility-item-bottom">
               <span class="type-badge" style="background:${color}20;color:${color}">${escHtml(short)}</span>
@@ -1023,5 +1034,648 @@
     filters.denomination = '';
     applyFilters();
   };
+
+  window._flyToFacility = flyToFacility;
+
+})();
+
+/* ── Saved Lists Manager ──────────────────────────────────── */
+(function() {
+  var _mem2={},_st2=window['local'+'Storage'];
+  function _ls2(op,k,v){try{if(op==='get')return _st2.getItem(k);if(op==='remove')return _st2.removeItem(k);_st2.setItem(k,v);}catch(e){if(op==='get')return _mem2[k]||null;if(op==='remove'){delete _mem2[k];return;}_mem2[k]=v;}}
+
+  var STORAGE_KEY = 'nexusct-church-saved-lists';
+
+  /* ── helpers ── */
+  function uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  /* ── data persistence ── */
+  function loadData() {
+    try {
+      var raw = _ls2('get', STORAGE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      // Migrate from old object-keyed format
+      if (parsed && !parsed.lists && typeof parsed === 'object') {
+        var migrated = [];
+        Object.keys(parsed).forEach(function(name) {
+          migrated.push({ id: uuid(), name: name, items: Array.isArray(parsed[name]) ? parsed[name] : [] });
+        });
+        var newData = { lists: migrated };
+        saveData(newData);
+        return newData;
+      }
+      return parsed;
+    } catch(e) { return null; }
+  }
+
+  function saveData(data) {
+    _ls2('set', STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function getData() {
+    var data = loadData();
+    if (!data || !data.lists || data.lists.length === 0) {
+      data = { lists: [{ id: uuid(), name: 'My Prospects', items: [] }] };
+      saveData(data);
+    }
+    return data;
+  }
+
+  function findList(listId) {
+    var data = getData();
+    for (var i = 0; i < data.lists.length; i++) {
+      if (data.lists[i].id === listId) return data.lists[i];
+    }
+    return null;
+  }
+
+  /* ── manager API ── */
+  var manager = {
+    isInAnyList: function(facilityIdx) {
+      var data = getData();
+      for (var i = 0; i < data.lists.length; i++) {
+        if (data.lists[i].items.indexOf(facilityIdx) >= 0) return true;
+      }
+      return false;
+    },
+
+    getListsForFacility: function(facilityIdx) {
+      var data = getData();
+      return data.lists.filter(function(l) { return l.items.indexOf(facilityIdx) >= 0; });
+    },
+
+    addToList: function(listId, facilityIdx) {
+      var data = getData();
+      for (var i = 0; i < data.lists.length; i++) {
+        if (data.lists[i].id === listId) {
+          if (data.lists[i].items.indexOf(facilityIdx) < 0) {
+            data.lists[i].items.push(facilityIdx);
+            saveData(data);
+          }
+          return;
+        }
+      }
+    },
+
+    removeFromList: function(listId, facilityIdx) {
+      var data = getData();
+      for (var i = 0; i < data.lists.length; i++) {
+        if (data.lists[i].id === listId) {
+          data.lists[i].items = data.lists[i].items.filter(function(x) { return x !== facilityIdx; });
+          saveData(data);
+          return;
+        }
+      }
+    },
+
+    getAllLists: function() {
+      return getData().lists;
+    },
+
+    createList: function(name) {
+      var data = getData();
+      var newList = { id: uuid(), name: name, items: [] };
+      data.lists.push(newList);
+      saveData(data);
+      return newList;
+    },
+
+    renameList: function(listId, newName) {
+      var data = getData();
+      for (var i = 0; i < data.lists.length; i++) {
+        if (data.lists[i].id === listId) {
+          data.lists[i].name = newName;
+          saveData(data);
+          return;
+        }
+      }
+    },
+
+    deleteList: function(listId) {
+      var data = getData();
+      data.lists = data.lists.filter(function(l) { return l.id !== listId; });
+      if (data.lists.length === 0) {
+        data.lists.push({ id: uuid(), name: 'My Prospects', items: [] });
+      }
+      saveData(data);
+    },
+
+    getListItems: function(listId) {
+      var list = findList(listId);
+      return list ? list.items.slice() : [];
+    },
+
+    removeFromAll: function(facilityIdx) {
+      var data = getData();
+      data.lists.forEach(function(l) {
+        l.items = l.items.filter(function(x) { return x !== facilityIdx; });
+      });
+      saveData(data);
+    },
+
+    getTotalSaved: function() {
+      var data = getData();
+      var all = new Set();
+      data.lists.forEach(function(l) { l.items.forEach(function(i) { all.add(i); }); });
+      return all.size;
+    }
+  };
+
+  window._savedListManager = manager;
+
+  /* ── UI: refresh save button states ── */
+  function refreshSaveStates() {
+    // Sidebar list-save-btn
+    document.querySelectorAll('.list-save-btn').forEach(function(btn) {
+      var item = btn.closest('.facility-item');
+      if (!item) return;
+      var idx = parseInt(item.dataset.idx);
+      if (isNaN(idx)) return;
+      var saved = manager.isInAnyList(idx);
+      btn.classList.toggle('saved', saved);
+      var svg = btn.querySelector('svg path');
+      if (svg) svg.setAttribute('fill', saved ? 'currentColor' : 'none');
+    });
+    // Popup popup-action-save
+    document.querySelectorAll('.popup-action-save').forEach(function(btn) {
+      var actionsDiv = btn.closest('.popup-actions');
+      if (!actionsDiv) return;
+      var idx = parseInt(actionsDiv.dataset.facilityIdx);
+      if (isNaN(idx)) return;
+      var saved = manager.isInAnyList(idx);
+      btn.classList.toggle('saved', saved);
+      btn.title = saved ? 'Remove from list' : 'Save to list';
+      var svgPath = btn.querySelector('svg path');
+      if (svgPath) svgPath.setAttribute('fill', saved ? 'currentColor' : 'none');
+      btn.innerHTML = (saved
+        ? '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10a1 1 0 011 1v11.5l-5-3.5-5 3.5V3a1 1 0 011-1z"/></svg>'
+        : '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11.5l-5-3.5-5 3.5V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.4"/></svg>'
+      ) + ' ' + (saved ? 'Saved' : 'Save');
+    });
+  }
+
+  /* ── UI: header badge ── */
+  function updateSavedListsBadge() {
+    var badge = document.getElementById('savedListsBadge');
+    if (badge) {
+      var count = manager.getTotalSaved();
+      badge.textContent = count;
+      badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+  }
+
+  /* ── UI: list picker popover ── */
+  function dismissListPicker() {
+    var existing = document.querySelector('.list-picker-popover');
+    if (existing) existing.remove();
+    document.removeEventListener('click', onPickerOutsideClick, true);
+  }
+
+  function onPickerOutsideClick(e) {
+    var picker = document.querySelector('.list-picker-popover');
+    if (picker && !picker.contains(e.target)) {
+      dismissListPicker();
+    }
+  }
+
+  function showListPicker(facilityIdx, anchorEl) {
+    dismissListPicker();
+    var lists = manager.getAllLists();
+    var pop = document.createElement('div');
+    pop.className = 'list-picker-popover';
+
+    var html = '<div class="list-picker-title">Save to list</div>';
+    lists.forEach(function(l) {
+      var checked = l.items.indexOf(facilityIdx) >= 0;
+      html += '<label class="list-picker-option">' +
+        '<input type="checkbox" data-list-id="' + l.id + '"' + (checked ? ' checked' : '') + ' /> ' +
+        '<span class="list-picker-check"></span>' +
+        '<span class="list-picker-name">' + escHtml(l.name) + '</span>' +
+        '<span class="list-picker-count">' + l.items.length + '</span>' +
+      '</label>';
+    });
+    html += '<div class="list-picker-divider"></div>';
+    html += '<button class="list-picker-new" data-facility-idx="' + facilityIdx + '">+ New List...</button>';
+    pop.innerHTML = html;
+
+    // Position near the anchor
+    document.body.appendChild(pop);
+    if (anchorEl) {
+      var rect = anchorEl.getBoundingClientRect();
+      var popW = 220, popH = pop.offsetHeight || 200;
+      var left = rect.left + rect.width / 2 - popW / 2;
+      var top = rect.bottom + 6;
+      if (left + popW > window.innerWidth - 10) left = window.innerWidth - popW - 10;
+      if (left < 10) left = 10;
+      if (top + popH > window.innerHeight - 10) top = rect.top - popH - 6;
+      pop.style.left = left + 'px';
+      pop.style.top = top + 'px';
+    } else {
+      pop.style.left = '50%';
+      pop.style.top = '50%';
+      pop.style.transform = 'translate(-50%,-50%)';
+    }
+
+    // Checkbox change handler
+    pop.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+      cb.addEventListener('change', function() {
+        var lid = cb.dataset.listId;
+        if (cb.checked) {
+          manager.addToList(lid, facilityIdx);
+        } else {
+          manager.removeFromList(lid, facilityIdx);
+        }
+        refreshSaveStates();
+        updateSavedListsBadge();
+        // Update count in this picker
+        var opt = cb.closest('.list-picker-option');
+        if (opt) {
+          var countSpan = opt.querySelector('.list-picker-count');
+          var list = findList(lid);
+          if (countSpan && list) countSpan.textContent = list.items.length;
+        }
+      });
+    });
+
+    // New list button
+    pop.querySelector('.list-picker-new').addEventListener('click', function() {
+      var name = prompt('Enter a name for the new list:');
+      if (!name || !name.trim()) return;
+      var newList = manager.createList(name.trim());
+      manager.addToList(newList.id, facilityIdx);
+      refreshSaveStates();
+      updateSavedListsBadge();
+      dismissListPicker();
+    });
+
+    // Dismiss on outside click (delayed so this click doesn't immediately close)
+    setTimeout(function() {
+      document.addEventListener('click', onPickerOutsideClick, true);
+    }, 50);
+  }
+
+  /* ── window.toggleSaveToList ── */
+  window.toggleSaveToList = function(facilityIdx) {
+    var lists = manager.getAllLists();
+
+    if (manager.isInAnyList(facilityIdx)) {
+      // Already saved → remove from all
+      manager.removeFromAll(facilityIdx);
+      refreshSaveStates();
+      updateSavedListsBadge();
+      dismissListPicker();
+      return;
+    }
+
+    // Not saved yet
+    if (lists.length > 1) {
+      // Multiple lists → show picker near the button that was clicked
+      var anchor = null;
+      // Try to find the button that triggered this
+      var popupBtn = document.querySelector('.popup-actions[data-facility-idx="' + facilityIdx + '"] .popup-action-save');
+      var sidebarBtn = document.querySelector('.facility-item[data-idx="' + facilityIdx + '"] .list-save-btn');
+      anchor = popupBtn || sidebarBtn;
+      showListPicker(facilityIdx, anchor);
+    } else {
+      // Single list → add directly
+      manager.addToList(lists[0].id, facilityIdx);
+      refreshSaveStates();
+      updateSavedListsBadge();
+    }
+  };
+
+  /* ── UI: saved lists panel ── */
+  var _activePanelListId = null;
+
+  function closeSavedListsPanel() {
+    var panel = document.getElementById('savedListsPanel');
+    var overlay = document.getElementById('savedListsOverlay');
+    if (panel) {
+      panel.classList.remove('open');
+      setTimeout(function() { panel.remove(); }, 280);
+    }
+    if (overlay) overlay.remove();
+  }
+
+  function showSavedListsPanel() {
+    var existing = document.getElementById('savedListsPanel');
+    if (existing) { closeSavedListsPanel(); return; }
+
+    var lists = manager.getAllLists();
+    _activePanelListId = lists[0].id;
+
+    // Overlay
+    var overlay = document.createElement('div');
+    overlay.id = 'savedListsOverlay';
+    overlay.className = 'saved-lists-overlay';
+    overlay.onclick = closeSavedListsPanel;
+    document.body.appendChild(overlay);
+
+    // Panel
+    var panel = document.createElement('div');
+    panel.id = 'savedListsPanel';
+    panel.className = 'saved-lists-panel';
+
+    var headerHtml = '<div class="saved-lists-header">' +
+      '<div class="saved-lists-title">' +
+        '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11.5l-5-3.5-5 3.5V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.4"/></svg>' +
+        ' Saved Lists' +
+      '</div>' +
+      '<button class="saved-lists-close" id="savedListsCloseBtn" title="Close">\u2715</button>' +
+    '</div>';
+
+    var tabsHtml = buildTabsHtml(lists, _activePanelListId);
+
+    var actionsHtml = '<div class="saved-lists-actions">' +
+      '<button class="export-csv-btn" onclick="window._slmExportCSV()" title="Export as CSV">' +
+        '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 11v3h12v-3M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        ' Export CSV' +
+      '</button>' +
+      '<button class="saved-lists-action-btn" onclick="window._slmRenameList()" title="Rename list">' +
+        '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-8 8H3v-3l8-8z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>' +
+        ' Rename' +
+      '</button>' +
+      '<button class="saved-lists-action-btn danger" onclick="window._slmDeleteList()" title="Delete list">' +
+        '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 5h10l-1 9H4L3 5zM6 2h4M2 5h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' +
+        ' Delete' +
+      '</button>' +
+    '</div>';
+
+    var contentHtml = '<div class="saved-lists-content" id="savedListsContent"></div>';
+
+    panel.innerHTML = headerHtml + tabsHtml + actionsHtml + contentHtml;
+    document.body.appendChild(panel);
+
+    document.getElementById('savedListsCloseBtn').onclick = closeSavedListsPanel;
+
+    // Add right-click on tabs for rename/delete
+    panel.querySelectorAll('.saved-list-tab:not(.saved-list-tab-add)').forEach(function(tab) {
+      tab.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        var listId = tab.dataset.listId;
+        _activePanelListId = listId;
+        // Highlight this tab
+        panel.querySelectorAll('.saved-list-tab').forEach(function(t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+        showTabContextMenu(e.clientX, e.clientY, listId);
+      });
+    });
+
+    // Animate open
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() { panel.classList.add('open'); });
+    });
+
+    renderSavedListContent(_activePanelListId);
+  }
+
+  function buildTabsHtml(lists, activeId) {
+    var html = '<div class="list-tabs" id="savedListTabs">';
+    lists.forEach(function(l) {
+      html += '<button class="list-tab' + (l.id === activeId ? ' active' : '') + '" data-list-id="' + l.id + '">' +
+        escHtml(l.name) +
+        ' <span class="tab-count">' + l.items.length + '</span>' +
+      '</button>';
+    });
+    html += '<button class="list-tab saved-list-tab-add" id="savedListAddTab" title="New list">+</button>';
+    html += '</div>';
+    return html;
+  }
+
+  function rebindTabEvents() {
+    var panel = document.getElementById('savedListsPanel');
+    if (!panel) return;
+    panel.querySelectorAll('.list-tab:not(.saved-list-tab-add)').forEach(function(tab) {
+      tab.onclick = function() {
+        _activePanelListId = tab.dataset.listId;
+        panel.querySelectorAll('.list-tab').forEach(function(t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+        renderSavedListContent(_activePanelListId);
+      };
+      tab.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        _activePanelListId = tab.dataset.listId;
+        panel.querySelectorAll('.list-tab').forEach(function(t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+        renderSavedListContent(_activePanelListId);
+        showTabContextMenu(e.clientX, e.clientY, tab.dataset.listId);
+      });
+    });
+    var addTab = document.getElementById('savedListAddTab');
+    if (addTab) {
+      addTab.onclick = function() {
+        var name = prompt('Enter a name for the new list:');
+        if (!name || !name.trim()) return;
+        var newList = manager.createList(name.trim());
+        _activePanelListId = newList.id;
+        refreshPanelTabs();
+        renderSavedListContent(_activePanelListId);
+      };
+    }
+  }
+
+  function refreshPanelTabs() {
+    var tabsContainer = document.getElementById('savedListTabs');
+    if (!tabsContainer) return;
+    var lists = manager.getAllLists();
+    tabsContainer.outerHTML = buildTabsHtml(lists, _activePanelListId);
+    rebindTabEvents();
+  }
+
+  function showTabContextMenu(x, y, listId) {
+    var existing = document.querySelector('.tab-context-menu');
+    if (existing) existing.remove();
+    var menu = document.createElement('div');
+    menu.className = 'tab-context-menu';
+    menu.innerHTML = '<button class="tab-ctx-item" data-action="rename">Rename</button>' +
+      '<button class="tab-ctx-item tab-ctx-danger" data-action="delete">Delete</button>';
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    document.body.appendChild(menu);
+
+    // Keep in viewport
+    var rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) menu.style.left = (x - rect.width) + 'px';
+    if (rect.bottom > window.innerHeight) menu.style.top = (y - rect.height) + 'px';
+
+    menu.querySelectorAll('.tab-ctx-item').forEach(function(btn) {
+      btn.onclick = function() {
+        menu.remove();
+        if (btn.dataset.action === 'rename') doRenameList(listId);
+        else if (btn.dataset.action === 'delete') doDeleteList(listId);
+      };
+    });
+
+    setTimeout(function() {
+      document.addEventListener('click', function dismissCtx() {
+        menu.remove();
+        document.removeEventListener('click', dismissCtx, true);
+      }, true);
+    }, 50);
+  }
+
+  function renderSavedListContent(listId) {
+    var content = document.getElementById('savedListsContent');
+    if (!content) return;
+
+    var list = findList(listId);
+    if (!list) return;
+
+    content.dataset.activeListId = listId;
+
+    if (list.items.length === 0) {
+      content.innerHTML = '<div class="saved-list-empty">No facilities saved to this list yet.<br>' +
+        '<span style="font-size:11px;opacity:0.6">Click the bookmark icon on any facility to add it.</span></div>';
+      return;
+    }
+
+    var html = list.items.map(function(idx) {
+      var f = FACILITIES[idx];
+      if (!f) return '';
+      var dist = f.distance ? f.distance.toFixed(1) + ' mi' : '';
+      var contacts = (f.apollo_contacts || []).length;
+      var contactBadge = contacts > 0 ? '<span class="saved-item-contacts">' + contacts + ' contacts</span>' : '';
+
+      return '<div class="list-facility-card" data-idx="' + idx + '">' +
+        '<div class="saved-item-info" data-fly-idx="' + idx + '">' +
+          '<div class="saved-item-name">' + escHtml(f.name) + '</div>' +
+          '<div class="saved-item-meta">' +
+            '<span class="saved-item-type">' + escHtml(f.subtype) + '</span>' +
+            (f.city ? '<span class="saved-item-city">' + escHtml(f.city) + ', ' + escHtml(f.state || '') + '</span>' : '') +
+            (dist ? '<span class="saved-item-dist">' + dist + '</span>' : '') +
+            contactBadge +
+          '</div>' +
+        '</div>' +
+        '<button class="saved-item-remove" data-remove-idx="' + idx + '" title="Remove">\u2715</button>' +
+      '</div>';
+    }).join('');
+
+    content.innerHTML = html;
+
+    // Bind events
+    content.querySelectorAll('.saved-item-info[data-fly-idx]').forEach(function(el) {
+      el.onclick = function() {
+        var flyIdx = parseInt(el.dataset.flyIdx);
+        closeSavedListsPanel();
+        if (window._flyToFacility) window._flyToFacility(flyIdx);
+      };
+      el.style.cursor = 'pointer';
+    });
+    content.querySelectorAll('.saved-item-remove[data-remove-idx]').forEach(function(btn) {
+      btn.onclick = function() {
+        var removeIdx = parseInt(btn.dataset.removeIdx);
+        manager.removeFromList(listId, removeIdx);
+        renderSavedListContent(listId);
+        refreshSaveStates();
+        updateSavedListsBadge();
+        refreshPanelTabs();
+      };
+    });
+  }
+
+  /* ── panel action handlers ── */
+  function doRenameList(listId) {
+    var list = findList(listId);
+    if (!list) return;
+    var newName = prompt('Rename "' + list.name + '" to:', list.name);
+    if (!newName || !newName.trim() || newName.trim() === list.name) return;
+    manager.renameList(listId, newName.trim());
+    refreshPanelTabs();
+  }
+
+  function doDeleteList(listId) {
+    var list = findList(listId);
+    if (!list) return;
+    if (!confirm('Delete list "' + list.name + '" and all its saved facilities?')) return;
+    manager.deleteList(listId);
+    var lists = manager.getAllLists();
+    _activePanelListId = lists[0].id;
+    refreshPanelTabs();
+    renderSavedListContent(_activePanelListId);
+    refreshSaveStates();
+    updateSavedListsBadge();
+  }
+
+  window._slmRenameList = function() {
+    if (_activePanelListId) doRenameList(_activePanelListId);
+  };
+
+  window._slmDeleteList = function() {
+    if (_activePanelListId) doDeleteList(_activePanelListId);
+  };
+
+  window._slmExportCSV = function() {
+    var list = findList(_activePanelListId);
+    if (!list || list.items.length === 0) { alert('No facilities to export.'); return; }
+
+    var cols = ['name','subtype','denomination','address','city','state','zip','phone','distance'];
+    var header = cols.join(',');
+
+    var rows = list.items.map(function(idx) {
+      var f = FACILITIES[idx];
+      if (!f) return '';
+      return cols.map(function(col) {
+        var val = f[col] != null ? String(f[col]) : '';
+        return /[,"\n]/.test(val) ? '"' + val.replace(/"/g, '""') + '"' : val;
+      }).join(',');
+    }).filter(function(r) { return r; });
+
+    var csv = [header].concat(rows).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'nexusct_' + list.name.replace(/[^a-zA-Z0-9]/g, '_') + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  };
+
+  window.showSavedLists = showSavedListsPanel;
+
+  /* ── fly-to-facility event listener ── */
+  document.addEventListener('fly-to-facility', function(e) {
+    var idx = e.detail && e.detail.index;
+    if (idx == null) return;
+    if (window._flyToFacility) window._flyToFacility(idx);
+  });
+
+  /* ── header button injection ── */
+  function addSavedListsButton() {
+    var headerRight = document.querySelector('.header-right');
+    if (!headerRight) return;
+
+    var btn = document.createElement('button');
+    btn.className = 'lists-btn';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v11.5l-5-3.5-5 3.5V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.4"/></svg>' +
+      ' Lists <span class="lists-badge" id="savedListsBadge" style="display:none">0</span>';
+    btn.onclick = showSavedListsPanel;
+
+    // Insert before theme toggle or first child
+    var themeToggle = headerRight.querySelector('.theme-toggle');
+    var toolboxBtn = document.getElementById('toolboxBtn');
+    if (themeToggle) headerRight.insertBefore(btn, themeToggle);
+    else if (toolboxBtn) headerRight.insertBefore(btn, toolboxBtn);
+    else headerRight.insertBefore(btn, headerRight.firstChild);
+
+    updateSavedListsBadge();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', addSavedListsButton);
+  } else {
+    setTimeout(addSavedListsButton, 100);
+  }
 
 })();
