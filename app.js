@@ -413,6 +413,7 @@
         <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.toggleToolbox();}" title="Open Toolbox">Toolbox &rarr;</button>
         <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openToolForFacility('contact-enrichment','${FACILITIES.indexOf(f)}','lookupContacts');}" title="View Contacts">Contacts</button>
         <button class="popup-action-btn" onclick="if(window.ChurchTools){ChurchTools.openToolForFacility('av-estimator','${FACILITIES.indexOf(f)}','calcAV');}" title="AV Estimate">Estimate</button>
+        <button class="popup-action-btn popup-action-research" onclick="if(window.ChurchTools){ChurchTools.openToolForFacility('deep-research','${FACILITIES.indexOf(f)}','runDeepResearch');}" title="Deep Research">Research</button>
       </div>
     </div>`;
   }

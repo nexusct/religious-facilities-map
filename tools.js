@@ -108,6 +108,13 @@
       desc: 'Generate personalized outreach based on facility profile',
       color: '#a78bfa',
     },
+    {
+      id: 'deep-research',
+      name: 'Deep Research',
+      icon: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="7.5" cy="7.5" r="5" stroke="currentColor" stroke-width="1.4"/><path d="M11.5 11.5L16 16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5.5 7.5h4M7.5 5.5v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+      desc: 'Deep-dive research on ICT needs, ownership, contacts, and building plans',
+      color: '#ec4899',
+    },
   ];
 
   /* ── Utility ────────────────────────────────────────────── */
@@ -749,6 +756,242 @@ Complete streaming setups start at $4,500, with full broadcast studio packages a
   }
 
   /* ══════════════════════════════════════════════════════════
+     TOOL 11: Deep Research
+     ══════════════════════════════════════════════════════════ */
+  function renderDeepResearch() {
+    return `
+      <div class="tool-intro">Deep-dive research on a facility — discover ICT infrastructure needs, ownership &amp; property management relationships, key contacts, and available building plans or blueprints.</div>
+      ${facilitySelector('toolFacilitySelect', 'Facility')}
+      <button class="tool-btn" onclick="ChurchTools.runDeepResearch()" style="background:#ec4899">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none" style="vertical-align:-2px;margin-right:4px"><circle cx="7.5" cy="7.5" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M11.5 11.5L16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Run Deep Research
+      </button>
+      <div id="deepResearchResult" class="tool-result"></div>`;
+  }
+
+  function buildContactCard(c) {
+    var links = '';
+    if (c.email) links += '<a href="mailto:' + escHtml(c.email) + '" class="contact-action-link">✉ ' + escHtml(c.email) + '</a>';
+    if (c.linkedin) links += '<a href="' + escHtml(c.linkedin) + '" target="_blank" rel="noopener" class="contact-action-link li">LinkedIn →</a>';
+    if (c.phone) links += '<a href="tel:' + escHtml(c.phone) + '" class="contact-action-link">☎ ' + escHtml(c.phone) + '</a>';
+    return '<div class="enriched-contact-card"><div class="ecc-name">' + escHtml(c.name) + '</div><div class="ecc-title">' + escHtml(c.title) + '</div>' + (c.city || c.state ? '<div class="ecc-location">' + escHtml([c.city, c.state].filter(Boolean).join(', ')) + '</div>' : '') + '<div class="ecc-links">' + links + '</div></div>';
+  }
+
+  function runDeepResearch() {
+    var f = getSelectedFacility();
+    if (!f) { document.getElementById('deepResearchResult').innerHTML = '<div class="result-empty">Select a facility.</div>'; return; }
+
+    var el = document.getElementById('deepResearchResult');
+    var name = f.name || '';
+    var city = f.city || '';
+    var state = f.state || '';
+    var addr = f.address || '';
+    var loc = [city, state].filter(Boolean).join(', ');
+    var fullAddr = [addr, city, state, f.zip].filter(Boolean).join(', ');
+    var denom = f.denomination || '';
+    var contacts = f.apollo_contacts || [];
+    var org = f.apollo_org || {};
+    var website = f.website || '';
+
+    // Show animated loading
+    el.innerHTML = '<div class="research-loading"><div class="research-spinner"></div><div class="research-loading-text">Compiling research dossier...</div></div>';
+
+    // Small delay for visual feedback, then render the full dossier
+    setTimeout(function() {
+      var html = '';
+
+      // Header
+      html += '<div class="research-dossier">';
+      html += '<div class="research-header">';
+      html += '<div class="research-title">' + escHtml(name) + '</div>';
+      html += '<div class="research-subtitle">' + escHtml(f.subtype || '') + (denom ? ' · ' + escHtml(denom) : '') + (loc ? ' · ' + escHtml(loc) : '') + '</div>';
+      html += '</div>';
+
+      // ── Section 1: ICT Infrastructure Needs Assessment ──
+      html += '<div class="research-section">';
+      html += '<div class="research-section-header" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+      html += '<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M3 9h12M9 3v12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+      html += '<span>ICT Infrastructure Needs</span>';
+      html += '<svg class="research-chevron" width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      html += '</div>';
+      html += '<div class="research-section-body">';
+
+      // Analyze from available data
+      var ictNeeds = [];
+      ictNeeds.push({ area: 'AV / Sound System', priority: 'High', reasoning: 'Worship facilities require professional audio for services, events, and potentially live streaming.', searchLabel: 'Search AV Systems', searchUrl: 'https://www.google.com/search?q=' + encodeURIComponent(name + ' ' + loc + ' audio video system') });
+      ictNeeds.push({ area: 'Security & Access Control', priority: 'High', reasoning: 'Houses of worship are increasingly investing in security cameras, access control, and emergency notification systems.', searchLabel: 'Search Security', searchUrl: 'https://www.google.com/search?q=' + encodeURIComponent(name + ' ' + loc + ' security cameras access control') });
+      ictNeeds.push({ area: 'Network / Wi-Fi', priority: 'Medium', reasoning: 'Guest Wi-Fi, streaming, church management software, and digital signage all require reliable networking.', searchLabel: 'Search Network', searchUrl: 'https://www.google.com/search?q=' + encodeURIComponent(name + ' ' + loc + ' wifi internet technology') });
+      ictNeeds.push({ area: 'Live Streaming / Broadcast', priority: denom && (denom.toLowerCase().includes('baptist') || denom.toLowerCase().includes('methodist') || denom.toLowerCase().includes('catholic') || denom.toLowerCase().includes('lutheran') || denom.toLowerCase().includes('pentecostal')) ? 'High' : 'Medium', reasoning: 'Post-pandemic, most congregations maintain some form of online ministry or live stream capability.', searchLabel: 'Search Streaming', searchUrl: 'https://www.google.com/search?q=' + encodeURIComponent(name + ' ' + loc + ' live stream online service') });
+      ictNeeds.push({ area: 'Digital Signage / Displays', priority: 'Medium', reasoning: 'Digital bulletin boards, lobby displays, and sanctuary screens enhance communication.', searchLabel: 'Search Signage', searchUrl: 'https://www.google.com/search?q=' + encodeURIComponent(name + ' ' + loc + ' digital signage display') });
+      ictNeeds.push({ area: 'Phone System / VoIP', priority: org.employees && parseInt(org.employees) > 5 ? 'High' : 'Low', reasoning: org.employees ? 'With ' + org.employees + ' staff members, a modern phone system is essential.' : 'Smaller congregations often rely on cell phones, but growing organizations benefit from VoIP.', searchLabel: 'Search Phone', searchUrl: 'https://www.google.com/search?q=' + encodeURIComponent(name + ' ' + loc + ' phone system') });
+
+      ictNeeds.forEach(function(need) {
+        var priorityColor = need.priority === 'High' ? '#ef4444' : need.priority === 'Medium' ? '#f59e0b' : '#6b7280';
+        html += '<div class="research-ict-card">';
+        html += '<div class="ict-card-top"><span class="ict-area">' + escHtml(need.area) + '</span><span class="ict-priority" style="color:' + priorityColor + '">' + escHtml(need.priority) + '</span></div>';
+        html += '<div class="ict-reasoning">' + escHtml(need.reasoning) + '</div>';
+        html += '<a href="' + need.searchUrl + '" target="_blank" rel="noopener" class="ict-search-link">' + escHtml(need.searchLabel) + ' →</a>';
+        html += '</div>';
+      });
+
+      // Quick research links
+      html += '<div class="research-links-grid">';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent('"' + name + '" ' + loc + ' technology OR wifi OR AV OR audio OR video OR camera OR security') + '" target="_blank" rel="noopener" class="research-link-btn">🔍 Technology News</a>';
+      if (website) html += '<a href="' + escHtml(website) + '" target="_blank" rel="noopener" class="research-link-btn">🌐 Website</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent(name + ' ' + loc + ' renovation OR construction OR expansion OR building project') + '" target="_blank" rel="noopener" class="research-link-btn">🏗 Building Projects</a>';
+      html += '</div>';
+
+      html += '</div></div>'; // end section 1
+
+      // ── Section 2: Ownership & Property Management ──
+      html += '<div class="research-section">';
+      html += '<div class="research-section-header" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+      html += '<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M3 15V7l6-4 6 4v8" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><rect x="7" y="10" width="4" height="5" stroke="currentColor" stroke-width="1.2"/></svg>';
+      html += '<span>Ownership & Property Management</span>';
+      html += '<svg class="research-chevron" width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      html += '</div>';
+      html += '<div class="research-section-body">';
+
+      // Denomination hierarchy / parent org
+      if (denom) {
+        html += '<div class="research-info-card">';
+        html += '<div class="info-card-label">Denomination / Affiliation</div>';
+        html += '<div class="info-card-value">' + escHtml(denom) + (f.religion ? ' (' + escHtml(f.religion) + ')' : '') + '</div>';
+        html += '</div>';
+      }
+
+      // Parent org from Apollo
+      if (org.linkedin || org.industry || org.description) {
+        html += '<div class="research-info-card">';
+        html += '<div class="info-card-label">Organization Data (Apollo)</div>';
+        if (org.industry) html += '<div class="info-card-row"><span class="info-row-label">Industry:</span> ' + escHtml(org.industry) + '</div>';
+        if (org.employees) html += '<div class="info-card-row"><span class="info-row-label">Employees:</span> ' + escHtml(org.employees) + '</div>';
+        if (org.revenue) html += '<div class="info-card-row"><span class="info-row-label">Revenue:</span> ' + escHtml(org.revenue) + '</div>';
+        if (org.founded) html += '<div class="info-card-row"><span class="info-row-label">Founded:</span> ' + escHtml(org.founded) + '</div>';
+        if (org.description) html += '<div class="info-card-row info-description">' + escHtml(org.description) + '</div>';
+        if (org.linkedin) html += '<a href="' + escHtml(org.linkedin) + '" target="_blank" rel="noopener" class="research-link-btn" style="margin-top:6px">LinkedIn Profile →</a>';
+        html += '</div>';
+      }
+
+      // Property research links
+      var countySearchName = (city || '') + ' ' + (state || '') + ' county';
+      html += '<div class="research-links-grid">';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent(name + ' ' + loc + ' property records OR tax records OR parcel') + '" target="_blank" rel="noopener" class="research-link-btn">🏛 Property Records</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent(countySearchName + ' property tax lookup assessor') + '" target="_blank" rel="noopener" class="research-link-btn">📋 County Assessor</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent('"' + name + '" ' + loc + ' property management OR facilities manager') + '" target="_blank" rel="noopener" class="research-link-btn">👤 Property Manager</a>';
+      if (denom) {
+        html += '<a href="https://www.google.com/search?q=' + encodeURIComponent(denom + ' diocese OR district OR conference ' + state) + '" target="_blank" rel="noopener" class="research-link-btn">⛪ ' + escHtml(denom) + ' Hierarchy</a>';
+      }
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent('"' + name + '" OR "' + (fullAddr || loc) + '" site:linkedin.com') + '" target="_blank" rel="noopener" class="research-link-btn">🔗 LinkedIn Search</a>';
+      html += '<a href="https://opencorporates.com/companies?q=' + encodeURIComponent(name) + '&jurisdiction_code=' + encodeURIComponent((state || 'us').toLowerCase()) + '" target="_blank" rel="noopener" class="research-link-btn">🏢 Corporate Records</a>';
+      html += '</div>';
+
+      html += '</div></div>'; // end section 2
+
+      // ── Section 3: Key Contacts & Decision Makers ──
+      html += '<div class="research-section">';
+      html += '<div class="research-section-header" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+      html += '<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="6" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.4"/></svg>';
+      html += '<span>Key Contacts & Decision Makers</span>';
+      html += '<span class="research-section-badge">' + contacts.length + '</span>';
+      html += '<svg class="research-chevron" width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      html += '</div>';
+      html += '<div class="research-section-body">';
+
+      if (contacts.length > 0) {
+        // Separate high-value from others
+        var highValue = [];
+        var others = [];
+        var people = f.apollo_people || [];
+        contacts.forEach(function(c) {
+          var matchedPerson = people.find(function(p) { return c.name && p.first_name && c.name.indexOf(p.first_name) === 0; });
+          var isHigh = matchedPerson ? matchedPerson.high_value : true;
+          if (isHigh) highValue.push(c); else others.push(c);
+        });
+
+        if (highValue.length > 0) {
+          html += '<div class="contacts-group-label">Decision Makers</div>';
+          highValue.forEach(function(c) {
+            html += buildContactCard(c);
+          });
+        }
+        if (others.length > 0) {
+          html += '<div class="contacts-group-label" style="margin-top:12px">Other Contacts</div>';
+          others.forEach(function(c) {
+            html += buildContactCard(c);
+          });
+        }
+      } else {
+        html += '<div class="result-empty">No enriched contacts. Use the research links below to discover contacts.</div>';
+      }
+
+      html += '<div class="research-links-grid" style="margin-top:10px">';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent('"' + name + '" pastor OR director OR administrator OR manager ' + loc) + '" target="_blank" rel="noopener" class="research-link-btn">🔍 Find Staff</a>';
+      html += '<a href="https://www.linkedin.com/search/results/people/?keywords=' + encodeURIComponent(name + ' ' + loc) + '" target="_blank" rel="noopener" class="research-link-btn">🔗 LinkedIn People</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent('"' + name + '" ' + loc + ' staff OR team OR leadership OR directory') + '" target="_blank" rel="noopener" class="research-link-btn">👥 Staff Directory</a>';
+      html += '</div>';
+
+      html += '</div></div>'; // end section 3
+
+      // ── Section 4: Design Drawings / Blueprints / Floorplans ──
+      html += '<div class="research-section">';
+      html += '<div class="research-section-header" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+      html += '<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 6h14M6 2v14" stroke="currentColor" stroke-width="1.1" stroke-dasharray="2 1.5"/></svg>';
+      html += '<span>Drawings, Blueprints & Floorplans</span>';
+      html += '<svg class="research-chevron" width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      html += '</div>';
+      html += '<div class="research-section-body">';
+
+      html += '<div class="research-note">Building plans may be available through county records, building permit archives, or the facility itself. Use these links to search:</div>';
+
+      html += '<div class="research-links-grid">';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent('"' + name + '" ' + loc + ' floor plan OR blueprint OR building plan OR site plan') + '" target="_blank" rel="noopener" class="research-link-btn">📐 Floor Plans</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent('"' + name + '" ' + loc + ' building permit OR construction permit') + '" target="_blank" rel="noopener" class="research-link-btn">🏗 Building Permits</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent(loc + ' building department permits online') + '" target="_blank" rel="noopener" class="research-link-btn">🏛 Bldg Department</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent('"' + name + '" ' + loc + ' architect OR architecture OR design firm') + '" target="_blank" rel="noopener" class="research-link-btn">✏️ Architect Info</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent('"' + name + '" ' + loc + ' renovation OR remodel OR addition OR expansion') + '" target="_blank" rel="noopener" class="research-link-btn">🔨 Renovations</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent(fullAddr + ' square footage OR sqft OR building size') + '" target="_blank" rel="noopener" class="research-link-btn">📏 Building Size</a>';
+      html += '</div>';
+
+      // Google Maps aerial view
+      var gmapsUrl = 'https://www.google.com/maps/@' + f.lat + ',' + f.lon + ',200m/data=!3m1!1e3';
+      html += '<div class="research-aerial-section">';
+      html += '<div class="info-card-label" style="margin-bottom:6px">Aerial / Satellite View</div>';
+      html += '<a href="' + gmapsUrl + '" target="_blank" rel="noopener"><img src="https://maps.googleapis.com/maps/api/staticmap?center=' + f.lat + ',' + f.lon + '&zoom=19&size=300x200&scale=2&maptype=satellite&key=AIzaSyDnKyekc_Ctc5sI0LbQ2pHqgVTuqlfvs4s" alt="Aerial" class="research-aerial-img" /></a>';
+      html += '<a href="' + gmapsUrl + '" target="_blank" rel="noopener" class="research-link-btn" style="margin-top:4px">Open in Google Maps →</a>';
+      html += '</div>';
+
+      html += '</div></div>'; // end section 4
+
+      // ── Section 5: Additional Research ──
+      html += '<div class="research-section">';
+      html += '<div class="research-section-header" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+      html += '<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M9 5v4l3 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+      html += '<span>Additional Research</span>';
+      html += '<svg class="research-chevron" width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      html += '</div>';
+      html += '<div class="research-section-body">';
+
+      html += '<div class="research-links-grid">';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent('"' + name + '" ' + loc) + '" target="_blank" rel="noopener" class="research-link-btn">🔍 General Search</a>';
+      html += '<a href="https://www.google.com/maps/search/' + encodeURIComponent(name + ' ' + fullAddr) + '" target="_blank" rel="noopener" class="research-link-btn">📍 Google Maps</a>';
+      html += '<a href="https://projects.propublica.org/nonprofits/search?q=' + encodeURIComponent(name) + '" target="_blank" rel="noopener" class="research-link-btn">📊 ProPublica 990</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent(name + ' ' + loc + ' events OR calendar OR schedule') + '" target="_blank" rel="noopener" class="research-link-btn">📅 Events</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent(name + ' ' + loc + ' reviews OR rating') + '" target="_blank" rel="noopener" class="research-link-btn">⭐ Reviews</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent(name + ' ' + loc + ' news OR announcement') + '" target="_blank" rel="noopener" class="research-link-btn">📰 News</a>';
+      if (website) html += '<a href="' + escHtml(website) + '" target="_blank" rel="noopener" class="research-link-btn">🌐 Official Website</a>';
+      html += '<a href="https://www.google.com/search?q=' + encodeURIComponent(name + ' ' + loc + ' facebook OR instagram OR social media') + '" target="_blank" rel="noopener" class="research-link-btn">📱 Social Media</a>';
+      html += '</div>';
+
+      html += '</div></div>'; // end section 5
+
+      html += '</div>'; // end dossier
+
+      el.innerHTML = html;
+    }, 600);
+  }
+
+  /* ══════════════════════════════════════════════════════════
      TOOLBOX PANEL UI
      ══════════════════════════════════════════════════════════ */
   const RENDER_MAP = {
@@ -762,6 +1005,7 @@ Complete streaming setups start at $4,500, with full broadcast studio packages a
     'security-estimator': renderSecurityEstimator,
     'contact-enrichment': renderContactEnrichment,
     'outreach-generator': renderOutreachGenerator,
+    'deep-research': renderDeepResearch,
   };
 
   const AUTO_RUN_MAP = {
@@ -773,6 +1017,7 @@ Complete streaming setups start at $4,500, with full broadcast studio packages a
     'assessBuilding': assessBuilding,
     'scoreTech': scoreTech,
     'generateOutreach': generateOutreach,
+    'runDeepResearch': runDeepResearch,
   };
 
   function openToolForFacility(toolId, facilityIdx, autoRunFnName) {
@@ -1089,6 +1334,7 @@ Complete streaming setups start at $4,500, with full broadcast studio packages a
     calcAV, checkGrants, lookup990, assessBuilding, scoreTech,
     calcSecurity, lookupContacts, generateOutreach, copyOutreach,
     toggleFav, runCompare, openToolForFacility,
+    runDeepResearch,
   };
 
 })();
