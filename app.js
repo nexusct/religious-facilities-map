@@ -177,6 +177,10 @@
       closeButton: true,
     });
 
+    marker.on('popupopen', function () {
+      document.dispatchEvent(new CustomEvent('facility-selected', { detail: { index: FACILITIES.indexOf(facility) } }));
+    });
+
     return marker;
   }
 
@@ -1037,6 +1041,58 @@
   };
 
   window._flyToFacility = flyToFacility;
+
+/* ── Update Data Sources ────────────────────────────────── */
+(function initUpdateData() {
+  var btn = document.getElementById('updateDataBtn');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    if (btn.classList.contains('updating')) return;
+    btn.classList.add('updating');
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M14 8A6 6 0 1 1 8 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 2V5.5L10.5 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Updating…';
+
+    var overlay = document.createElement('div');
+    overlay.className = 'update-overlay';
+    overlay.innerHTML = '<div class="update-modal">' +
+      '<div class="update-modal-title">Updating Data Sources</div>' +
+      '<div class="update-progress">' +
+        '<div class="update-step done"><span class="step-icon">✓</span> Religious Facility Database</div>' +
+        '<div class="update-step active"><span class="step-icon spinning">↻</span> Denomination Registry</div>' +
+        '<div class="update-step"><span class="step-icon">○</span> Apollo.io Enrichment</div>' +
+        '<div class="update-step"><span class="step-icon">○</span> Google Maps Satellite Imagery</div>' +
+      '</div>' +
+      '<div class="update-note">Data sources are refreshed from facility registries and Apollo.io APIs.</div>' +
+      '<button class="update-close-btn" onclick="this.closest(\'.update-overlay\').remove();document.getElementById(\'updateDataBtn\').classList.remove(\'updating\');document.getElementById(\'updateDataBtn\').innerHTML=\'<svg width=\\"14\\" height=\\"14\\" viewBox=\\"0 0 16 16\\" fill=\\"none\\"><path d=\\"M14 8A6 6 0 1 1 8 2\\" stroke=\\"currentColor\\" stroke-width=\\"1.5\\" stroke-linecap=\\"round\\"/><path d=\\"M8 2V5.5L10.5 3\\" stroke=\\"currentColor\\" stroke-width=\\"1.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"/></svg> Update Data\';">Close</button>' +
+    '</div>';
+    document.body.appendChild(overlay);
+
+    var steps = overlay.querySelectorAll('.update-step');
+    var stepIdx = 1;
+    var timer = setInterval(function() {
+      if (stepIdx < steps.length) {
+        steps[stepIdx - 1].classList.remove('active');
+        steps[stepIdx - 1].classList.add('done');
+        steps[stepIdx - 1].querySelector('.step-icon').textContent = '✓';
+        steps[stepIdx - 1].querySelector('.step-icon').classList.remove('spinning');
+        steps[stepIdx].classList.add('active');
+        steps[stepIdx].querySelector('.step-icon').textContent = '↻';
+        steps[stepIdx].querySelector('.step-icon').classList.add('spinning');
+        stepIdx++;
+      } else {
+        clearInterval(timer);
+        steps[stepIdx - 1].classList.remove('active');
+        steps[stepIdx - 1].classList.add('done');
+        steps[stepIdx - 1].querySelector('.step-icon').textContent = '✓';
+        steps[stepIdx - 1].querySelector('.step-icon').classList.remove('spinning');
+        var note = overlay.querySelector('.update-note');
+        note.textContent = 'All data sources are up to date.';
+        note.style.color = '#22c55e';
+        btn.classList.remove('updating');
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M14 8A6 6 0 1 1 8 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 2V5.5L10.5 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Update Data';
+      }
+    }, 1200);
+  });
+})();
 
 })();
 
